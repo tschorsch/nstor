@@ -344,6 +344,7 @@ TorBktapApp::ReadFromRelay (Ptr<Socket> socket)
 void
 TorBktapApp::ReceivedRelayCell (Ptr<BktapCircuit> circ, CellDirection direction, Ptr<Packet> cell)
 {
+
   Ptr<SeqQueue> queue = circ->GetQueue (direction);
   UdpCellHeader header;
   cell->PeekHeader (header);
@@ -361,11 +362,11 @@ TorBktapApp::ReceivedAck (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
     {
       // DupACK. Do fast retransmit.
       ++queue->dupackcnt;
-      if (m_writebucket.GetSize () >= CELL_PAYLOAD_SIZE && queue->dupackcnt > 2)
+      if (m_writebucket.GetSize () >= CELL_PAYLOAD_SIZE && queue->dupackcnt == 3)
         {
+          ScheduleRto (circ,direction,true);
           uint32_t bytes_written = FlushPendingCell (circ,direction,true);
           m_writebucket.Decrement (bytes_written);
-          queue->dupackcnt = 0;
         }
     }
   else if (header.ack > queue->headSeq)
@@ -687,6 +688,7 @@ TorBktapApp::Rto (Ptr<BktapCircuit> circ, CellDirection direction)
 {
   Ptr<SeqQueue> queue = circ->GetQueue (direction);
   queue->nextTxSeq = queue->headSeq;
+  queue->dupackcnt = 0;
   uint32_t bytes_written = FlushPendingCell (circ,direction);
   m_writebucket.Decrement (bytes_written);
 }
