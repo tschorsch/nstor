@@ -49,6 +49,7 @@ UdpChannel::Flush ()
     {
       if (SpeaksCells () && m_devQlimit <= m_devQ->GetNPackets ())
         {
+          m_flushEvent = Simulator::Schedule(MilliSeconds(1), &UdpChannel::Flush, this);
           return;
         }
       Ptr<Packet> data = Create<Packet> ();
