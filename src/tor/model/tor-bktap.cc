@@ -362,10 +362,10 @@ TorBktapApp::ReceivedAck (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
   Ptr<SeqQueue> queue = circ->GetQueue (direction);
   if (header.ack == queue->headSeq)
     {
-      Ptr<SeqQueue> queue = circ->GetQueue(direction);
-      if (queue->queueState != QUEUESTATE_STABLE) {
-        return;
-      }
+      if (queue->queueState != QUEUESTATE_STABLE)
+        {
+          return;
+        }
 
       // DupACK. Do fast retransmit.
       ++queue->dupackcnt;
@@ -444,11 +444,14 @@ TorBktapApp::ReceivedFwd (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
 
   if (header.fwd > queue->begRttSeq)
     {
-      if (queue->queueState == QUEUESTATE_TIMEOUT) {
-        queue->queueState = QUEUESTATE_RECOVERY;
-      } else if (queue->queueState == QUEUESTATE_RECOVERY) {
-        queue->queueState = QUEUESTATE_STABLE;
-      }
+      if (queue->queueState == QUEUESTATE_TIMEOUT)
+        {
+          queue->queueState = QUEUESTATE_RECOVERY;
+        }
+      else if (queue->queueState == QUEUESTATE_RECOVERY)
+        {
+          queue->queueState = QUEUESTATE_STABLE;
+        }
 
       queue->begRttSeq = queue->nextTxSeq;
       CongestionAvoidance (queue,ch->rttEstimator.baseRtt);
