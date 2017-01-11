@@ -362,6 +362,11 @@ TorBktapApp::ReceivedAck (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
   Ptr<SeqQueue> queue = circ->GetQueue (direction);
   if (header.ack == queue->headSeq)
     {
+      Ptr<SeqQueue> queue = circ->GetQueue(direction);
+      if (queue->queueState != QUEUESTATE_STABLE) {
+        return;
+      }
+
       // DupACK. Do fast retransmit.
       ++queue->dupackcnt;
       if (m_writebucket.GetSize () >= CELL_PAYLOAD_SIZE && queue->dupackcnt > 2)
@@ -439,6 +444,12 @@ TorBktapApp::ReceivedFwd (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
 
   if (header.fwd > queue->begRttSeq)
     {
+      if (queue->queueState == QUEUESTATE_TIMEOUT) {
+        queue->queueState = QUEUESTATE_RECOVERY;
+      } else if (queue->queueState == QUEUESTATE_RECOVERY) {
+        queue->queueState = QUEUESTATE_STABLE;
+      }
+
       queue->begRttSeq = queue->nextTxSeq;
       CongestionAvoidance (queue,ch->rttEstimator.baseRtt);
       queue->ssthresh = min (queue->cwnd,queue->ssthresh);
@@ -692,6 +703,7 @@ TorBktapApp::Rto (Ptr<BktapCircuit> circ, CellDirection direction)
 {
   Ptr<SeqQueue> queue = circ->GetQueue (direction);
   queue->nextTxSeq = queue->headSeq;
+  queue->queueState = QUEUESTATE_TIMEOUT;
   FlushPendingCell (circ,direction);
 }
 

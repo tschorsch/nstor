@@ -15,6 +15,10 @@
 #define UDP_CELL_HEADER_SIZE (4 + 4 + 2 + 6 + 2 + 1)
 
 
+#define QUEUESTATE_STABLE 0
+#define QUEUESTATE_TIMEOUT 1
+#define QUEUESTATE_RECOVERY 2
+
 namespace ns3 {
 
 class BktapCircuit;
@@ -354,6 +358,7 @@ public:
   map< uint32_t, Ptr<Packet> > cellMap;
 
   bool wasRetransmit;
+  uint32_t queueState;
 
   queue<uint32_t> ackq;
   queue<uint32_t> fwdq;
@@ -374,6 +379,8 @@ public:
     begRttSeq = 1;
     ssthresh = pow (2,10);
     dupackcnt = 0;
+ 
+    queueState = QUEUESTATE_STABLE;
   }
 
   // IMPORTANT: return value is now true if the cell is new, else false
