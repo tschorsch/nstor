@@ -38,6 +38,7 @@ int main (int argc, char *argv[]) {
     // Config::SetDefault ("ns3::TorBaseApp::BandwidthBurst", DataRateValue (DataRate ("12Mbps")));
     Config::SetDefault ("ns3::TorApp::WindowStart", IntegerValue (500));
     Config::SetDefault ("ns3::TorApp::WindowIncrement", IntegerValue (50));
+    // Config::SetDefault ("ns3::TorBktapApp::Nagle", BooleanValue (true));
 
     NS_LOG_INFO("setup topology");
 

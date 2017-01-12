@@ -585,8 +585,7 @@ public:
   void ScheduleRto (Ptr<BktapCircuit>, CellDirection, bool = false);
   void Rto (Ptr<BktapCircuit>, CellDirection);
 
-  static void SetNagle(bool);
-  static bool s_nagle;
+  bool m_nagle;
 
   EventId writeevent;
   EventId readevent;

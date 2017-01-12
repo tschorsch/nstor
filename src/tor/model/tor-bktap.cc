@@ -49,7 +49,7 @@ UdpChannel::Flush ()
     {
       if (SpeaksCells () && m_devQlimit <= m_devQ->GetNPackets ())
         {
-          m_flushEvent = Simulator::Schedule(MilliSeconds(1), &UdpChannel::Flush, this);
+          m_flushEvent = Simulator::Schedule (MilliSeconds (1), &UdpChannel::Flush, this);
           return;
         }
       Ptr<Packet> data = Create<Packet> ();
@@ -66,23 +66,26 @@ UdpChannel::Flush ()
 void
 UdpChannel::ScheduleFlush (bool delay)
 {
-  if (m_flushQueue.size() == 0) {
-    return;
-  }
-  if (m_flushQueue.size () > 1)
+  if (m_flushQueue.size () == 0)
+    {
+      return;
+    }
+  else if (m_flushQueue.size () > 1)
     {
       m_flushEvent.Cancel ();
       Flush ();
     }
   else
     {
-      if (!delay) {
-        m_flushEvent.Cancel();
-        m_flushEvent = Simulator::Schedule (MilliSeconds (1), &UdpChannel::Flush, this);
-      } else {
-        m_flushEvent.Cancel();
-        m_flushEvent = Simulator::Schedule (rttEstimator.baseRtt, &UdpChannel::Flush, this);
-      }
+      m_flushEvent.Cancel ();
+      if (!delay)
+        {
+          m_flushEvent = Simulator::Schedule (MilliSeconds (1), &UdpChannel::Flush, this);
+        }
+      else
+        {
+          m_flushEvent = Simulator::Schedule (rttEstimator.baseRtt, &UdpChannel::Flush, this);
+        }
     }
 }
 
@@ -131,8 +134,6 @@ BktapCircuit::GetQueue (CellDirection direction)
     }
 }
 
-bool TorBktapApp::s_nagle = false;
-
 TorBktapApp::TorBktapApp ()
 {
   NS_LOG_FUNCTION (this);
@@ -148,7 +149,11 @@ TorBktapApp::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::TorBktapApp")
     .SetParent<TorBaseApp> ()
-    .AddConstructor<TorBktapApp> ();
+    .AddConstructor<TorBktapApp> ()
+    .AddAttribute ("Nagle", "Enable the Nagle Algorithm for BackTap.",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&TorBktapApp::m_nagle),
+                   MakeBooleanChecker ());
   return tid;
 }
 
@@ -387,10 +392,11 @@ TorBktapApp::ReceivedAck (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
       queue->DiscardUpTo (header.ack);
       Time rtt = queue->actRtt.EstimateRtt (header.ack);
       ScheduleRto (circ,direction,true);
-      if(!queue->PackageInflight()) {
-        Ptr<UdpChannel> ch = circ->GetChannel(direction);
-        ch->ScheduleFlush(false);
-      }
+      if (!queue->PackageInflight ())
+        {
+          Ptr<UdpChannel> ch = circ->GetChannel(direction);
+          ch->ScheduleFlush(false);
+        }
     }
   else
     {
@@ -595,7 +601,7 @@ TorBktapApp::FlushPendingCell (Ptr<BktapCircuit> circ, CellDirection direction, 
 
       ch->m_flushQueue.push (cell);
       int bytes_written = cell->GetSize ();
-      ch->ScheduleFlush (s_nagle && queue->PackageInflight());
+      ch->ScheduleFlush (m_nagle && queue->PackageInflight ());
 
       if (ch->SpeaksCells ())
         {
@@ -759,12 +765,6 @@ TorBktapApp::DoDispose (void)
   baseCircuits.clear ();
   channels.clear ();
   Application::DoDispose ();
-}
-
-void
-TorBktapApp::SetNagle (bool nagle)
-{
-  s_nagle = nagle;
 }
 
 } //namespace ns3
