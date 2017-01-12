@@ -64,8 +64,11 @@ UdpChannel::Flush ()
 
 
 void
-UdpChannel::ScheduleFlush ()
+UdpChannel::ScheduleFlush (bool delay)
 {
+  if (m_flushQueue.size() == 0) {
+    return;
+  }
   if (m_flushQueue.size () > 1)
     {
       m_flushEvent.Cancel ();
@@ -73,7 +76,13 @@ UdpChannel::ScheduleFlush ()
     }
   else
     {
-      m_flushEvent = Simulator::Schedule (MilliSeconds (1), &UdpChannel::Flush, this);
+      if (!delay) {
+        m_flushEvent.Cancel();
+        m_flushEvent = Simulator::Schedule (MilliSeconds (1), &UdpChannel::Flush, this);
+      } else {
+        m_flushEvent.Cancel();
+        m_flushEvent = Simulator::Schedule (rttEstimator.baseRtt, &UdpChannel::Flush, this);
+      }
     }
 }
 
@@ -122,6 +131,7 @@ BktapCircuit::GetQueue (CellDirection direction)
     }
 }
 
+bool TorBktapApp::s_nagle = false;
 
 TorBktapApp::TorBktapApp ()
 {
@@ -377,6 +387,10 @@ TorBktapApp::ReceivedAck (Ptr<BktapCircuit> circ, CellDirection direction, FdbkC
       queue->DiscardUpTo (header.ack);
       Time rtt = queue->actRtt.EstimateRtt (header.ack);
       ScheduleRto (circ,direction,true);
+      if(!queue->PackageInflight()) {
+        Ptr<UdpChannel> ch = circ->GetChannel(direction);
+        ch->ScheduleFlush(false);
+      }
     }
   else
     {
@@ -581,11 +595,11 @@ TorBktapApp::FlushPendingCell (Ptr<BktapCircuit> circ, CellDirection direction, 
 
       ch->m_flushQueue.push (cell);
       int bytes_written = cell->GetSize ();
-      ch->ScheduleFlush ();
+      ch->ScheduleFlush (s_nagle && queue->PackageInflight());
 
       if (ch->SpeaksCells ())
         {
-          ScheduleRto (circ,direction);
+          ScheduleRto (circ,direction,true);
         }
       else
         {
@@ -745,6 +759,12 @@ TorBktapApp::DoDispose (void)
   baseCircuits.clear ();
   channels.clear ();
   Application::DoDispose ();
+}
+
+void
+TorBktapApp::SetNagle (bool nagle)
+{
+  s_nagle = nagle;
 }
 
 } //namespace ns3
